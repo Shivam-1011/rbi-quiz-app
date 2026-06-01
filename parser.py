@@ -70,9 +70,6 @@ def format_question(text):
 
     return text.strip()
 
-question = format_question(question)
-explanation = format_question(explanation)
-
 
 # --------------------------------------------------
 # EXTRACT QUESTIONS
