@@ -1,23 +1,101 @@
 import re
 import pdfplumber
 
+
+# --------------------------------------------------
+# CLEAN PDF ARTIFACTS
+# --------------------------------------------------
+def clean_text(text):
+
+    patterns = [
+        r'\b\d+\s*\|\s*Page\b\s*\d*',  # 3 | Page
+        r'\bPage\s+\d+\b',             # Page 3
+        r'^\s*\d+\s*$'                 # standalone page numbers
+    ]
+
+    for pattern in patterns:
+        text = re.sub(
+            pattern,
+            '',
+            text,
+            flags=re.IGNORECASE | re.MULTILINE
+        )
+
+    return text
+
+
+# --------------------------------------------------
+# FORMAT QUESTIONS
+# --------------------------------------------------
+def format_question(text):
+
+    # Remove extra spaces
+    text = re.sub(r'\s+', ' ', text)
+
+    # New line before numbered points
+    text = re.sub(
+        r'(?<!\n)(\d+\.)',
+        r'\n\1',
+        text
+    )
+
+    # New line before Roman numerals
+    text = re.sub(
+        r'(?<!\n)(\([ivxIVX]+\))',
+        r'\n\1',
+        text
+    )
+
+    # Remove excessive blank lines
+    text = re.sub(
+        r'\n\s*\n+',
+        '\n\n',
+        text
+    )
+
+    return text.strip()
+
+
+# --------------------------------------------------
+# EXTRACT QUESTIONS
+# --------------------------------------------------
 def extract_questions(pdf_file):
+
     questions = []
 
+    # ----------------------------
+    # Read PDF
+    # ----------------------------
     with pdfplumber.open(pdf_file) as pdf:
-        text = ""
-        for page in pdf.pages:
-            t = page.extract_text()
-            if t:
-                text += "\n" + t
 
-    blocks = re.split(r"\nQ\.\d+\)", text)
+        text = ""
+
+        for page in pdf.pages:
+
+            page_text = page.extract_text()
+
+            if page_text:
+                page_text = clean_text(page_text)
+                text += "\n" + page_text
+
+    # ----------------------------
+    # Split Questions
+    # Example:
+    # Q.1)
+    # Q.2)
+    # ----------------------------
+    blocks = re.split(
+        r"\nQ\.\d+\)",
+        text
+    )
 
     for block in blocks:
+
         if "Answer:" not in block:
             continue
 
         try:
+
             lines = block.strip().split("\n")
 
             question = ""
@@ -28,29 +106,97 @@ def extract_questions(pdf_file):
             mode = "question"
 
             for line in lines:
+
                 line = line.strip()
 
-                if re.match(r"^\[[A-E]\]", line):
+                if not line:
+                    continue
+
+                # --------------------
+                # Options
+                # [A] option text
+                # --------------------
+                option_match = re.match(
+                    r"^\[([A-E])\]\s*(.*)",
+                    line
+                )
+
+                if option_match:
+
                     mode = "option"
-                    m = re.match(r"^\[([A-E])\]\s*(.*)", line)
-                    if m:
-                        options[m.group(1)] = m.group(2)
 
-                elif line.startswith("Answer:"):
-                    answer = line.replace("Answer:", "").strip()
+                    options[
+                        option_match.group(1)
+                    ] = option_match.group(2)
+
+                    continue
+
+                # --------------------
+                # Answer
+                # --------------------
+                if line.startswith("Answer:"):
+
+                    answer = (
+                        line.replace(
+                            "Answer:",
+                            ""
+                        )
+                        .strip()
+                    )
+
                     mode = "answer"
+                    continue
 
-                elif line.startswith("Explanation:"):
-                    explanation += line.replace("Explanation:", "").strip()
+                # --------------------
+                # Explanation
+                # --------------------
+                if line.startswith("Explanation:"):
+
+                    explanation += (
+                        line.replace(
+                            "Explanation:",
+                            ""
+                        )
+                        .strip()
+                    )
+
                     mode = "explanation"
+                    continue
 
-                else:
-                    if mode == "question":
-                        question += " " + line
-                    elif mode == "explanation":
-                        explanation += " " + line
+                # --------------------
+                # Question text
+                # --------------------
+                if mode == "question":
 
-            if question and options and answer:
+                    question += " " + line
+
+                # --------------------
+                # Explanation text
+                # --------------------
+                elif mode == "explanation":
+
+                    explanation += " " + line
+
+            # ----------------------------
+            # Final formatting
+            # ----------------------------
+            question = format_question(
+                question
+            )
+
+            explanation = format_question(
+                explanation
+            )
+
+            # ----------------------------
+            # Save Question
+            # ----------------------------
+            if (
+                question
+                and options
+                and answer
+            ):
+
                 questions.append({
                     "question": question,
                     "options": options,
@@ -58,7 +204,7 @@ def extract_questions(pdf_file):
                     "explanation": explanation
                 })
 
-        except:
+        except Exception:
             pass
 
     return questions
