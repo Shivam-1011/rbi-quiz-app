@@ -23,19 +23,20 @@ st.markdown("""
 .question-box{
     padding:20px;
     border-radius:12px;
-    border:1px solid #dcdcdc;
-    background:white;
+    border:1px solid var(--secondary-background-color);
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
     font-size:18px;
     line-height:1.8;
-    margin-bottom:15px;
     white-space:pre-wrap;
 }
 
 .explanation-box{
     padding:15px;
     border-radius:12px;
-    background:#eef9ff;
     border-left:5px solid #2196f3;
+    background-color: var(--secondary-background-color);
+    color: var(--text-color);
     white-space:pre-wrap;
     line-height:1.7;
 }
