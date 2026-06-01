@@ -29,26 +29,41 @@ def clean_text(text):
 # --------------------------------------------------
 def format_question(text):
 
-    # Remove extra spaces
+    # Remove extra spaces but preserve line structure
     text = re.sub(r'\s+', ' ', text)
 
-    # New line before numbered points
+    # Numbered statements
     text = re.sub(
         r'(?<!\n)(\d+\.)',
-        r'\n\1',
+        r'\n\n\1',
         text
     )
 
-    # New line before Roman numerals
+    # Roman numerals
     text = re.sub(
         r'(?<!\n)(\([ivxIVX]+\))',
-        r'\n\1',
+        r'\n\n\1',
         text
+    )
+
+    # Bullets
+    text = re.sub(
+        r'(?<!\n)([•●▪■◦])',
+        r'\n\n\1',
+        text
+    )
+
+    # Statement labels
+    text = re.sub(
+        r'(?<!\n)(Statement\s+\d+)',
+        r'\n\n\1',
+        text,
+        flags=re.IGNORECASE
     )
 
     # Remove excessive blank lines
     text = re.sub(
-        r'\n\s*\n+',
+        r'\n{3,}',
         '\n\n',
         text
     )
