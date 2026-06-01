@@ -15,9 +15,31 @@ st.set_page_config(
 # --------------------------------------------------
 st.markdown("""
 <style>
+
 [data-testid="stSidebar"] {
     width: 240px !important;
 }
+
+.question-box{
+    padding:20px;
+    border-radius:12px;
+    border:1px solid #dcdcdc;
+    background:white;
+    font-size:18px;
+    line-height:1.8;
+    margin-bottom:15px;
+    white-space:pre-wrap;
+}
+
+.explanation-box{
+    padding:15px;
+    border-radius:12px;
+    background:#eef9ff;
+    border-left:5px solid #2196f3;
+    white-space:pre-wrap;
+    line-height:1.7;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -135,11 +157,13 @@ if st.session_state.questions:
     # ----------------------------------------------
     # QUESTION DISPLAY
     # ----------------------------------------------
-    st.text_area(
-        "Question",
-        q["question"],
-        height=250,
-        disabled=True
+    st.markdown(
+        f"""
+        <div class="question-box">
+        {q["question"]}
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
     # ----------------------------------------------
@@ -157,7 +181,7 @@ if st.session_state.questions:
     )
 
     choice = st.radio(
-        "Choose Answer",
+        "",
         options,
         index=options.index(saved_answer),
         format_func=lambda x:
@@ -203,40 +227,58 @@ if st.session_state.questions:
             )
 
         if q.get("explanation"):
-
+        
             st.markdown("### Explanation")
-
-            st.text_area(
-                "",
-                q["explanation"],
-                height=150,
-                disabled=True,
-                key=f"exp_{current_index}"
+        
+            st.markdown(
+                f"""
+                <div class="explanation-box">
+                {q["explanation"]}
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
     # ----------------------------------------------
     # NAVIGATION
     # ----------------------------------------------
-    col1, col2 = st.columns(2)
-
+    st.divider()
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
     with col1:
-
+    
         if st.button(
-            "⬅ Previous Question"
+            "⬅ Previous",
+            use_container_width=True
         ):
             if current_index > 0:
                 st.session_state.index -= 1
                 st.rerun()
-
+    
     with col2:
-
+    
+        st.markdown(
+            f"""
+            <div style="
+                text-align:center;
+                padding-top:10px;
+                font-size:22px;
+                font-weight:bold;
+            ">
+                Question {current_index + 1} of {total_questions}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    
+    with col3:
+    
         if st.button(
-            "Next Question ➡"
+            "Next ➡",
+            use_container_width=True
         ):
-            if (
-                current_index
-                < total_questions - 1
-            ):
+            if current_index < total_questions - 1:
                 st.session_state.index += 1
                 st.rerun()
 
