@@ -70,6 +70,9 @@ def format_question(text):
 
     return text.strip()
 
+question = format_question(question)
+explanation = format_question(explanation)
+
 
 # --------------------------------------------------
 # EXTRACT QUESTIONS
@@ -182,15 +185,19 @@ def extract_questions(pdf_file):
                 # Question text
                 # --------------------
                 if mode == "question":
-
-                    question += " " + line
+                    if question:
+                        question += " " + line
+                    else:
+                        question = line
 
                 # --------------------
                 # Explanation text
                 # --------------------
                 elif mode == "explanation":
-
-                    explanation += " " + line
+                    if explanation:
+                        explanation += " " + line
+                    else:
+                        explanation = line
 
             # ----------------------------
             # Final formatting
