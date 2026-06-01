@@ -129,11 +129,18 @@ if st.session_state.questions:
     st.progress(progress)
 
     st.subheader(
-        f"Question {current_index + 1} / "
-        f"{total_questions}"
+        f"Question {current_index + 1} / {total_questions}"
     )
 
-    st.write(q["question"])
+    # ----------------------------------------------
+    # QUESTION DISPLAY
+    # ----------------------------------------------
+    st.text_area(
+        "Question",
+        q["question"],
+        height=250,
+        disabled=True
+    )
 
     # ----------------------------------------------
     # OPTIONS
@@ -176,6 +183,8 @@ if st.session_state.questions:
             if choice == q["answer"]:
                 st.session_state.score += 1
 
+        st.rerun()
+
     # ----------------------------------------------
     # SHOW RESULT
     # ----------------------------------------------
@@ -190,13 +199,19 @@ if st.session_state.questions:
             st.success("✅ Correct Answer")
         else:
             st.error(
-                f"❌ Wrong Answer\n\n"
-                f"Correct Answer: {q['answer']}"
+                f"❌ Wrong Answer\n\nCorrect Answer: {q['answer']}"
             )
 
         if q.get("explanation"):
-            st.info(
-                q["explanation"]
+
+            st.markdown("### Explanation")
+
+            st.text_area(
+                "",
+                q["explanation"],
+                height=150,
+                disabled=True,
+                key=f"exp_{current_index}"
             )
 
     # ----------------------------------------------
@@ -226,7 +241,7 @@ if st.session_state.questions:
                 st.rerun()
 
     # ----------------------------------------------
-    # FINISH TEST
+    # FINISH QUIZ
     # ----------------------------------------------
     st.divider()
 
@@ -236,19 +251,29 @@ if st.session_state.questions:
             st.session_state.submitted
         )
 
-        st.success(
-            f"""
-            Quiz Complete!
+        if attempted > 0:
 
-            Score: {st.session_state.score}/{total_questions}
+            accuracy = (
+                st.session_state.score
+                / attempted
+            ) * 100
 
-            Attempted: {attempted}/{total_questions}
+            st.success(
+                f"""
+Quiz Complete!
 
-            Accuracy:
-            {(st.session_state.score / attempted * 100):.2f}%
-            """ if attempted > 0 else
-            "No questions attempted."
-        )
+Score: {st.session_state.score}/{total_questions}
+
+Attempted: {attempted}/{total_questions}
+
+Accuracy: {accuracy:.2f}%
+"""
+            )
+
+        else:
+            st.warning(
+                "No questions attempted."
+            )
 
     # --------------------------------------------------
     # SIDEBAR
