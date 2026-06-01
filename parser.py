@@ -1,229 +1,225 @@
 import re
 import pdfplumber
 
+# --------------------------------------------------
+
+# CLEAN PDF ARTIFACTS
 
 # --------------------------------------------------
-# CLEAN PDF ARTIFACTS
-# --------------------------------------------------
+
 def clean_text(text):
 
-    patterns = [
-        r'\b\d+\s*\|\s*Page\b\s*\d*',  # 3 | Page
-        r'\bPage\s+\d+\b',             # Page 3
-        r'^\s*\d+\s*$'                 # standalone page numbers
-    ]
+```
+patterns = [
+    r'\b\d+\s*\|\s*Page\b\s*\d*',   # 3 | Page
+    r'\bPage\s+\d+\b',              # Page 3
+    r'^\s*\d+\s*$'                  # Standalone page numbers
+]
 
-    for pattern in patterns:
-        text = re.sub(
-            pattern,
-            '',
-            text,
-            flags=re.IGNORECASE | re.MULTILINE
-        )
+for pattern in patterns:
+    text = re.sub(
+        pattern,
+        '',
+        text,
+        flags=re.IGNORECASE | re.MULTILINE
+    )
 
-    return text
-
+return text
+```
 
 # --------------------------------------------------
-# FORMAT QUESTIONS
+
+# FORMAT QUESTIONS / EXPLANATIONS
+
 # --------------------------------------------------
+
 def format_question(text):
 
-    # Remove extra spaces but preserve line structure
-    text = re.sub(r'\s+', ' ', text)
+```
+# Collapse multiple spaces
+text = re.sub(r'\s+', ' ', text)
 
-    # Numbered statements
-    text = re.sub(
-        r'(?<!\n)(\d+\.)',
-        r'\n\n\1',
-        text
-    )
+# Numbered statements
+text = re.sub(
+    r'\s+(\d+\.)\s+',
+    r'\n\1 ',
+    text
+)
 
-    # Roman numerals
-    text = re.sub(
-        r'(?<!\n)(\([ivxIVX]+\))',
-        r'\n\n\1',
-        text
-    )
+# Roman numerals
+text = re.sub(
+    r'\s+(\([ivxIVX]+\))\s+',
+    r'\n\1 ',
+    text
+)
 
-    # Bullets
-    text = re.sub(
-        r'(?<!\n)([•●▪■◦])',
-        r'\n\n\1',
-        text
-    )
+# Bullet symbols
+text = re.sub(
+    r'\s*([•●▪■◦])\s*',
+    r'\n\1 ',
+    text
+)
 
-    # Statement labels
-    text = re.sub(
-        r'(?<!\n)(Statement\s+\d+)',
-        r'\n\n\1',
-        text,
-        flags=re.IGNORECASE
-    )
+# Statement labels
+text = re.sub(
+    r'\s+(Statement\s+\d+)',
+    r'\n\1',
+    text,
+    flags=re.IGNORECASE
+)
 
-    # Remove excessive blank lines
-    text = re.sub(
-        r'\n{3,}',
-        '\n\n',
-        text
-    )
+# Remove excessive line breaks
+text = re.sub(r'\n+', '\n', text)
 
-    return text.strip()
-
+return text.strip()
+```
 
 # --------------------------------------------------
+
 # EXTRACT QUESTIONS
+
 # --------------------------------------------------
+
 def extract_questions(pdf_file):
 
-    questions = []
+```
+questions = []
 
-    # ----------------------------
-    # Read PDF
-    # ----------------------------
-    with pdfplumber.open(pdf_file) as pdf:
+with pdfplumber.open(pdf_file) as pdf:
 
-        text = ""
+    text = ""
 
-        for page in pdf.pages:
+    for page in pdf.pages:
 
-            page_text = page.extract_text()
+        page_text = page.extract_text()
 
-            if page_text:
-                page_text = clean_text(page_text)
-                text += "\n" + page_text
+        if page_text:
+            page_text = clean_text(page_text)
+            text += "\n" + page_text
 
-    # ----------------------------
-    # Split Questions
-    # Example:
-    # Q.1)
-    # Q.2)
-    # ----------------------------
-    blocks = re.split(
-        r"\nQ\.\d+\)",
-        text
-    )
+# Split by Q.1), Q.2), etc.
+blocks = re.split(
+    r"\nQ\.\d+\)",
+    text
+)
 
-    for block in blocks:
+for block in blocks:
 
-        if "Answer:" not in block:
-            continue
+    if "Answer:" not in block:
+        continue
 
-        try:
+    try:
 
-            lines = block.strip().split("\n")
+        lines = block.strip().split("\n")
 
-            question = ""
-            options = {}
-            answer = ""
-            explanation = ""
+        question = ""
+        options = {}
+        answer = ""
+        explanation = ""
 
-            mode = "question"
+        mode = "question"
 
-            for line in lines:
+        for line in lines:
 
-                line = line.strip()
+            line = line.strip()
 
-                if not line:
-                    continue
+            if not line:
+                continue
 
-                # --------------------
-                # Options
-                # [A] option text
-                # --------------------
-                option_match = re.match(
-                    r"^\[([A-E])\]\s*(.*)",
-                    line
+            # --------------------
+            # OPTIONS
+            # --------------------
+            option_match = re.match(
+                r"^\[([A-E])\]\s*(.*)",
+                line
+            )
+
+            if option_match:
+
+                mode = "option"
+
+                options[
+                    option_match.group(1)
+                ] = option_match.group(2)
+
+                continue
+
+            # --------------------
+            # ANSWER
+            # --------------------
+            if line.startswith("Answer:"):
+
+                answer = (
+                    line.replace(
+                        "Answer:",
+                        ""
+                    )
+                    .strip()
                 )
 
-                if option_match:
+                mode = "answer"
+                continue
 
-                    mode = "option"
+            # --------------------
+            # EXPLANATION
+            # --------------------
+            if line.startswith("Explanation:"):
 
-                    options[
-                        option_match.group(1)
-                    ] = option_match.group(2)
-
-                    continue
-
-                # --------------------
-                # Answer
-                # --------------------
-                if line.startswith("Answer:"):
-
-                    answer = (
-                        line.replace(
-                            "Answer:",
-                            ""
-                        )
-                        .strip()
+                explanation = (
+                    line.replace(
+                        "Explanation:",
+                        ""
                     )
+                    .strip()
+                )
 
-                    mode = "answer"
-                    continue
+                mode = "explanation"
+                continue
 
-                # --------------------
-                # Explanation
-                # --------------------
-                if line.startswith("Explanation:"):
+            # --------------------
+            # QUESTION TEXT
+            # --------------------
+            if mode == "question":
 
-                    explanation += (
-                        line.replace(
-                            "Explanation:",
-                            ""
-                        )
-                        .strip()
-                    )
+                if question:
+                    question += " " + line
+                else:
+                    question = line
 
-                    mode = "explanation"
-                    continue
+            # --------------------
+            # EXPLANATION TEXT
+            # --------------------
+            elif mode == "explanation":
 
-                # --------------------
-                # Question text
-                # --------------------
-                if mode == "question":
-                    if question:
-                        question += " " + line
-                    else:
-                        question = line
+                if explanation:
+                    explanation += " " + line
+                else:
+                    explanation = line
 
-                # --------------------
-                # Explanation text
-                # --------------------
-                elif mode == "explanation":
-                    if explanation:
-                        explanation += " " + line
-                    else:
-                        explanation = line
+        # ----------------------------
+        # FINAL FORMATTING
+        # ----------------------------
+        question = format_question(question)
+        explanation = format_question(explanation)
 
-            # ----------------------------
-            # Final formatting
-            # ----------------------------
-            question = format_question(
-                question
-            )
+        # ----------------------------
+        # SAVE QUESTION
+        # ----------------------------
+        if (
+            question
+            and options
+            and answer
+        ):
 
-            explanation = format_question(
-                explanation
-            )
+            questions.append({
+                "question": question,
+                "options": options,
+                "answer": answer,
+                "explanation": explanation
+            })
 
-            # ----------------------------
-            # Save Question
-            # ----------------------------
-            if (
-                question
-                and options
-                and answer
-            ):
+    except Exception as e:
+        print(e)
 
-                questions.append({
-                    "question": question,
-                    "options": options,
-                    "answer": answer,
-                    "explanation": explanation
-                })
-
-        except Exception:
-            pass
-
-    return questions
+return questions
+```
